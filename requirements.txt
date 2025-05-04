@@ -1,5 +1,2 @@
-
 streamlit
 pyswisseph
-pandas
-matplotlib
