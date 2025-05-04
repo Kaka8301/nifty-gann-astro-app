@@ -50,3 +50,50 @@ if uploaded_file:
 
     # Step 4: Download option
     st.download_button("📥 Download Results", full_df.to_csv(index=False), "nifty_astro_signals.csv", "text/csv")
+import pandas as pd
+import swisseph as swe
+import streamlit as st
+from datetime import datetime
+import pytz
+
+st.set_page_config(page_title="Nifty Gann Astro Forecast", layout="centered")
+
+def get_planet_positions(dt):
+    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+    planets = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn']
+    positions = {}
+    for i, name in zip(range(7), planets):
+        pos, _ = swe.calc_ut(jd, i)
+        positions[name] = round(pos[0], 2)  # Only longitude
+    return positions
+
+# UI: Upload file
+st.title("🌟 Nifty Gann + Astrology Forecast System")
+st.subheader("Upload 1-min CSV file & get planetary signals")
+uploaded_file = st.file_uploader("Upload 1-min Nifty data (CSV)", type=["csv"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+
+    # Try to parse datetime
+    datetime_col = [col for col in df.columns if 'time' in col.lower() or 'date' in col.lower()]
+    if datetime_col:
+        df['datetime'] = pd.to_datetime(df[datetime_col[0]])
+        df = df.sort_values(by='datetime')
+        df['planet_positions'] = df['datetime'].apply(get_planet_positions)
+
+        # Extract positions into separate columns
+        for planet in ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn']:
+            df[planet] = df['planet_positions'].apply(lambda x: x[planet])
+
+        df.drop(columns=['planet_positions'], inplace=True)
+
+        st.success("✅ Planetary positions calculated.")
+        st.dataframe(df[['datetime', 'Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn']].head())
+
+        # Optionally: Download
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Full Astro Data CSV", csv, "astro_signals.csv", "text/csv")
+
+    else:
+        st.error("Could not find a valid datetime column.")
