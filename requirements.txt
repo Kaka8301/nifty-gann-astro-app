@@ -1,5 +1,5 @@
 
 streamlit
-flatlib
+pyswisseph
 pandas
 matplotlib
