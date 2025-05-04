@@ -3,10 +3,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from flatlib.chart import Chart
-from flatlib.datetime import Datetime
-from flatlib.geopos import GeoPos
-from flatlib import const
+from pyswisseph.chart import Chart
+from pyswisseph.datetime import Datetime
+from pyswisseph.geopos import GeoPos
+from pyswisseph import const
 import matplotlib.pyplot as plt
 
 # App title
