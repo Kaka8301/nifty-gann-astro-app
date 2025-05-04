@@ -1,38 +1,52 @@
 import streamlit as st
+import pandas as pd
 import swisseph as swe
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# Set Ephemeris path
-swe.set_ephe_path('.')
+st.title("📈 Nifty Gann + Astrology Forecast System")
+st.subheader("Upload 1-min CSV file & get planetary signals")
 
-st.title("Nifty Gann + Astrology Forecast")
-st.subheader("Planetary Positions using Swiss Ephemeris")
+# Step 1: Upload file
+uploaded_file = st.file_uploader("Upload 1-min Nifty data (CSV)", type=["csv"])
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.success("✅ File uploaded!")
 
-# Date input from user
-selected_date = st.date_input("Select a date for prediction", datetime.today())
+    # Assume columns: 'datetime', 'open', 'high', 'low', 'close'
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df = df.sort_values('datetime')
+    
+    # Step 2: Compute planetary positions
+    st.subheader("🪐 Calculating planetary longitudes...")
+    planets = ['SUN', 'MOON', 'MERCURY', 'VENUS', 'MARS', 'JUPITER', 'SATURN']
+    planet_data = []
 
-# Convert to Julian Day
-jd = swe.julday(selected_date.year, selected_date.month, selected_date.day)
+    for dt in df['datetime']:
+        jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60)
+        row = {'datetime': dt}
+        for p in planets:
+            lon, _ = swe.calc_ut(jd, getattr(swe, p))[:2]
+            row[p] = lon
+        planet_data.append(row)
 
-# Planets to calculate
-planets = {
-    "Sun": swe.SUN,
-    "Moon": swe.MOON,
-    "Mercury": swe.MERCURY,
-    "Venus": swe.VENUS,
-    "Mars": swe.MARS,
-    "Jupiter": swe.JUPITER,
-    "Saturn": swe.SATURN,
-    "Rahu (Mean)": swe.MEAN_NODE,
-    "Ketu (Mean)": swe.TRUE_NODE
-}
+    astro_df = pd.DataFrame(planet_data)
+    full_df = pd.merge(df, astro_df, on="datetime")
 
-# Show planetary positions
-st.write(f"Julian Day: {jd}")
-st.write("### Planetary Longitudes:")
+    st.success("✅ Planetary data added")
 
-for name, planet in planets.items():
-    pos, _ = swe.calc_ut(jd, planet)
-    st.write(f"{name}: {pos[0]:.2f}°")
+    # Step 3: Dummy signal logic (to be replaced with Gann/Astro logic)
+    def dummy_signal(row):
+        # Example: Buy if Moon > 180 deg
+        if row['MOON'] > 180:
+            return "BUY"
+        elif row['MOON'] < 90:
+            return "SELL"
+        else:
+            return "HOLD"
 
-st.info("This is the base setup. Gann and trading signal logic to be added next.")
+    full_df['Signal'] = full_df.apply(dummy_signal, axis=1)
+    st.subheader("📌 Signals")
+    st.dataframe(full_df[['datetime', 'close', 'MOON', 'Signal']])
+
+    # Step 4: Download option
+    st.download_button("📥 Download Results", full_df.to_csv(index=False), "nifty_astro_signals.csv", "text/csv")
