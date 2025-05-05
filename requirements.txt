@@ -2,3 +2,5 @@ streamlit
 pandas
 numpy
 pyswisseph==2.10.3.2
+plotly
+pytz
