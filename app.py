@@ -85,3 +85,61 @@ if uploaded_file:
     
     else:
         st.error("No datetime column found in CSV.")
+from datetime import timedelta
+
+st.subheader("🔮 Forecast Future Signals (Astro Only)")
+
+with st.form("forecast_form"):
+    start_date = st.date_input("Start Date")
+    start_time = st.time_input("Start Time")
+    end_date = st.date_input("End Date")
+    end_time = st.time_input("End Time")
+    submit = st.form_submit_button("Generate Forecast")
+
+if submit:
+    start_dt = datetime.combine(start_date, start_time)
+    end_dt = datetime.combine(end_date, end_time)
+    
+    forecast_data = []
+    current = start_dt
+    while current <= end_dt:
+        positions = get_planet_positions(current)
+        moon = positions['Moon']
+        jupiter = positions['Jupiter']
+        venus = positions['Venus']
+        saturn = positions['Saturn']
+        aspects = []
+
+        for name, angle in aspect_angles.items():
+            if abs((moon - jupiter) % 360 - angle) <= 1.5:
+                aspects.append(f"Moon-Jupiter {name}")
+            if abs((venus - saturn) % 360 - angle) <= 1.5:
+                aspects.append(f"Venus-Saturn {name}")
+
+        aspect_str = ", ".join(aspects)
+        if "trine" in aspect_str:
+            signal = "BUY"
+        elif "opposition" in aspect_str or "square" in aspect_str:
+            signal = "SELL"
+        elif aspect_str:
+            signal = "REVERSAL"
+        else:
+            signal = "HOLD"
+
+        forecast_data.append({
+            "datetime": current,
+            "Moon": moon,
+            "Jupiter": jupiter,
+            "Venus": venus,
+            "Saturn": saturn,
+            "Aspects": aspect_str,
+            "Signal": signal
+        })
+        current += timedelta(minutes=1)
+
+    forecast_df = pd.DataFrame(forecast_data)
+    st.success("✅ Forecast generated.")
+    st.dataframe(forecast_df)
+
+    csv = forecast_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Forecast CSV", csv, "future_forecast.csv", "text/csv")
