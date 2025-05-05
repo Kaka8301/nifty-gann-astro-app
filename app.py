@@ -63,5 +63,25 @@ if uploaded_file:
         df['planet_positions'] = df['datetime'].apply(get_planet_positions)
 
         for planet in ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn']:
-            df[planet]()
-# Streamlit app entry point will go here
+            df[planet] = df['planet_positions'].apply(lambda x: x[planet])
+
+        df['Aspects'] = df.apply(check_aspects, axis=1)
+        df['Signal'] = df.apply(generate_signal, axis=1)
+        df.drop(columns=['planet_positions'], inplace=True)
+
+        st.success("✅ Forecast generated.")
+        st.dataframe(df[['datetime', 'close', 'Moon', 'Jupiter', 'Venus', 'Saturn', 'Aspects', 'Signal']].head())
+
+        # Plot chart
+        fig = px.line(df, x='datetime', y='close', title="Nifty Close Price with Signals")
+        for i, row in df.iterrows():
+            if row['Signal'] in ["BUY", "SELL", "REVERSAL"]:
+                fig.add_vline(x=row['datetime'], line_dash="dot", line_color="red", annotation_text=row['Signal'])
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Download button
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Forecast CSV", csv, "nifty_forecast.csv", "text/csv")
+    
+    else:
+        st.error("No datetime column found in CSV.")
